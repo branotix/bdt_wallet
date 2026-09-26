@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bdt
+      POSTGRES_USER: bdt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bdt -d bdt"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  relayer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bdt:${POSTGRES_PASSWORD}@postgres:5432/bdt?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+  console:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["/usr/local/bin/console"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://bdt:${POSTGRES_PASSWORD}@postgres:5432/bdt?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    stop_grace_period: 15s
+
+volumes:
+  postgres_data:

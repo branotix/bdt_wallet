@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BDT Wallet — Admin Console</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --ink: #14171f;
+    --muted: #6b7280;
+    --line: #e3e6ec;
+    --accent: #0f7b5f;
+    --accent-soft: #e6f4ef;
+    --danger: #b4232c;
+    --warn: #8a5a00;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    padding: 18px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+  header .sub { color: var(--muted); font-size: 13px; margin-right: auto; }
+  .chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .panel + .panel { margin-top: 20px; }
+  h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  button {
+    font: inherit;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+  button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  input, select {
+    font: inherit;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--ink);
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .field { margin-bottom: 12px; }
+  .row { display: flex; gap: 10px; align-items: flex-end; }
+  .row > * { flex: 1; }
+  .row > button { flex: 0 0 auto; }
+
+  ul.accounts { list-style: none; margin: 0; padding: 0; }
+  ul.accounts li { border-top: 1px solid var(--line); }
+  ul.accounts li:first-child { border-top: none; }
+  ul.accounts button {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    background: transparent;
+    border: none;
+    color: var(--ink);
+    padding: 11px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+    text-align: left;
+  }
+  ul.accounts button:hover { background: var(--bg); filter: none; }
+  ul.accounts button[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  ul.accounts .bal { font-family: var(--mono); font-size: 13px; }
+  .tag { font-size: 11px; color: var(--warn); font-weight: 600; }
+
+  .balance { font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+  .balance small { font-size: 15px; color: var(--muted); font-weight: 500; }
+  .addr {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    word-break: break-all;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px;
+  }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+  .cost { font-size: 12.5px; color: var(--muted); font-family: var(--mono); margin: -4px 0 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding: 0 8px 7px;
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 8px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 12.5px; }
+  td.plain { font-family: inherit; }
+  tr:last-child td { border-bottom: none; }
+  .pos { color: var(--accent); }
+  .neg { color: var(--danger); }
+  .warned { color: var(--warn); font-weight: 600; }
+  .empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    max-width: 90vw;
+    background: var(--ink);
+    color: #fff;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+  }
+  #toast.show { opacity: 1; }
+  #toast.bad { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BDT Wallet — Admin Console</h1>
+  <span class="sub" id="netLabel">off-chain ledger</span>
+  <span class="chip" id="feeInternal">internal —</span>
+  <span class="chip" id="feeWithdraw">withdraw —</span>
+  <span class="chip">deposit free</span>
+</header>
+
+<main>
+  <section>
+    <div class="panel">
+      <h2>Accounts</h2>
+      <ul class="accounts" id="accountList"></ul>
+      <p class="empty" id="accountsEmpty" hidden>No accounts yet.</p>
+      <button id="createBtn" style="width:100%;margin-top:12px">+ Create account</button>
+      <p class="hint">user_id 1 is the treasury — every fee lands there.</p>
+    </div>
+  </section>
+
+  <section id="detail" hidden>
+    <div class="panel">
+      <h2>Balance — user <span id="selUser"></span></h2>
+      <div class="balance"><span id="balance">0.00</span> <small>BDT</small></div>
+    </div>
+
+    <div class="panel">
+      <h2>Deposit address</h2>
+      <div class="addr" id="depositAddr">—</div>
+      <div class="row" style="margin-top:10px">
+        <button class="ghost" id="copyBtn" style="flex:0 0 auto">Copy</button>
+        <a id="scanLink" class="hint" href="#" target="_blank" rel="noopener" style="flex:1;align-self:center">view on BscScan ↗</a>
+      </div>
+      <p class="hint">
+        Send BDT here from an external wallet on <span id="depositNet">BSC</span>.
+        The relayer's watcher credits this account once the transfer has enough
+        confirmations (<code>REQUIRED_CONFIRMATIONS</code>, 15+ on mainnet) — keep
+        <code>go run ./cmd</code> running, or nothing will arrive.
+      </p>
+      <p class="hint">
+        Never send from the hot wallet or from another account's deposit address.
+        That is your own money moving internally, not a deposit, and it is
+        correctly refused.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Internal transfer</h2>
+      <div class="field">
+        <label for="toUser">To account</label>
+        <select id="toUser"></select>
+      </div>
+      <div class="field">
+        <label for="tAmount">Amount (BDT)</label>
+        <input id="tAmount" type="number" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <p class="cost" id="tCost"></p>
+      <button id="transferBtn">Send internally</button>
+    </div>
+
+    <div class="panel">
+      <h2>Withdraw to external wallet</h2>
+      <div class="field">
+        <label for="wAddr">Destination address</label>
+        <input id="wAddr" placeholder="0x…" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="wAmount">Amount (BDT)</label>
+        <input id="wAmount" type="number" min="0.01" step="0.01" placeholder="0.00">
+      </div>
+      <p class="cost" id="wCost"></p>
+      <button id="withdrawBtn">Request withdrawal</button>
+      <p class="hint">Queued as <code>pending</code>; the relayer's withdraw worker broadcasts it.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Withdrawals</h2>
+      <table>
+        <thead><tr><th>#</th><th>Amount</th><th>Fee</th><th>To</th><th>Status</th></tr></thead>
+        <tbody id="withdrawRows"></tbody>
+      </table>
+      <p class="empty" id="withdrawEmpty" hidden>No withdrawals yet.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Ledger history</h2>
+      <table>
+        <thead><tr><th>#</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead>
+        <tbody id="historyRows"></tbody>
+      </table>
+      <p class="empty" id="historyEmpty" hidden>No entries yet.</p>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let selected = null;
+let accounts = [];
+let feeInternal = 0, feeWithdraw = 0;
+let explorerBase = 'https://testnet.bscscan.com';
+
+// When the server has API_AUTH_TOKEN set, every /api call needs a bearer token.
+// Stored in localStorage so it survives a reload, and asked for once on the
+// first 401 — the polling loop must not open a prompt every six seconds.
+let authToken = localStorage.getItem('bdtToken') || '';
+let askingForToken = false;
+
+// decimal.Decimal marshals as a JSON string by default, so accept both.
+const num = (v) => Number(v ?? 0);
+const money = (v) => num(v).toFixed(2);
+
+function toast(msg, bad) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = bad ? 'show bad' : 'show';
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { t.className = ''; }, 4000);
+}
+
+async function api(path, options = {}) {
+  const send = () => fetch(path, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
+    },
+  });
+
+  let res = await send();
+  if (res.status === 401 && !askingForToken) {
+    askingForToken = true;
+    try {
+      const entered = prompt('This console requires its API token (API_AUTH_TOKEN):', authToken);
+      if (entered && entered.trim()) {
+        authToken = entered.trim();
+        localStorage.setItem('bdtToken', authToken);
+        res = await send();
+      }
+    } finally {
+      askingForToken = false;
+    }
+  }
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || (res.status + ' ' + res.statusText));
+  return body;
+}
+
+const postJSON = (path, body) => api(path, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  // Amounts go as strings so 0.1 + 0.2 float noise never reaches the ledger.
+  body: JSON.stringify(body),
+});
+
+async function loadConfig() {
+  const c = await api('/api/config');
+  feeInternal = num(c.fees.internal_transfer);
+  feeWithdraw = num(c.fees.external_withdraw);
+  explorerBase = c.explorer_base || explorerBase;
+  $('netLabel').textContent = 'off-chain ledger, ' + c.network;
+  $('depositNet').textContent = c.network;
+  $('feeInternal').textContent = 'internal ' + money(feeInternal) + ' BDT';
+  $('feeWithdraw').textContent = 'withdraw ' + money(feeWithdraw) + ' BDT';
+  updateCosts();
+}
+
+async function loadAccounts() {
+  const data = await api('/api/accounts');
+  accounts = data.accounts;
+  const list = $('accountList');
+  list.innerHTML = '';
+  for (const a of accounts) {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.setAttribute('aria-current', String(a.user_id === selected));
+    const left = document.createElement('span');
+    left.textContent = 'user ' + a.user_id;
+    if (a.user_id === data.treasury_user_id) {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = ' treasury';
+      left.appendChild(tag);
+    }
+    const bal = document.createElement('span');
+    bal.className = 'bal';
+    bal.textContent = money(a.balance);
+    btn.append(left, bal);
+    btn.onclick = () => select(a.user_id);
+    li.appendChild(btn);
+    list.appendChild(li);
+  }
+  $('accountsEmpty').hidden = accounts.length > 0;
+
+  const to = $('toUser');
+  const keep = to.value;
+  to.innerHTML = '';
+  for (const a of accounts) {
+    if (a.user_id === selected) continue;
+    const opt = document.createElement('option');
+    opt.value = a.user_id;
+    opt.textContent = 'user ' + a.user_id + ' — ' + money(a.balance) + ' BDT';
+    to.appendChild(opt);
+  }
+  if (keep) to.value = keep;
+}
+
+async function loadDetail() {
+  if (selected === null) return;
+  const d = await api('/api/account?user_id=' + selected);
+  $('selUser').textContent = d.user_id;
+  $('balance').textContent = money(d.balance);
+
+  $('depositAddr').textContent = d.deposit_address || 'unavailable — DEPOSIT_WALLET_MNEMONIC not set';
+  $('copyBtn').disabled = !d.deposit_address;
+  const link = $('scanLink');
+  link.hidden = !d.deposit_address;
+  if (d.deposit_address) {
+    link.href = explorerBase + '/address/' + d.deposit_address;
+  }
+
+  const wRows = $('withdrawRows');
+  wRows.innerHTML = '';
+  for (const w of d.withdrawals) {
+    const tr = document.createElement('tr');
+    tr.appendChild(cell(w.id));
+    tr.appendChild(cell(money(w.amount)));
+    tr.appendChild(cell(money(w.fee)));
+    tr.appendChild(cell(w.to_address.slice(0, 10) + '…' + w.to_address.slice(-6)));
+    const status = cell(w.status, 'plain');
+    if (w.status === 'confirmed') status.classList.add('pos');
+    if (w.status === 'failed') status.classList.add('neg');
+    // 'stuck' means broadcast but not mined, and the relayer could not prove it
+    // is dead — it is deliberately NOT refunded. Needs a human, so make it loud.
+    if (w.status === 'stuck') {
+      status.classList.add('warned');
+      status.title = 'Broadcast but never mined. Not refunded, because it can still confirm. Check the relayer log.';
+    }
+    tr.appendChild(status);
+    wRows.appendChild(tr);
+  }
+  $('withdrawEmpty').hidden = d.withdrawals.length > 0;
+
+  const hRows = $('historyRows');
+  hRows.innerHTML = '';
+  for (const e of d.entries) {
+    const tr = document.createElement('tr');
+    tr.appendChild(cell(e.id));
+    tr.appendChild(cell(e.entry_type, 'plain'));
+    const amt = num(e.amount);
+    const amtCell = cell((amt > 0 ? '+' : '') + money(amt));
+    amtCell.classList.add(amt < 0 ? 'neg' : 'pos');
+    tr.appendChild(amtCell);
+    tr.appendChild(cell(e.reference_id ? e.reference_id.slice(0, 18) : '—'));
+    hRows.appendChild(tr);
+  }
+  $('historyEmpty').hidden = d.entries.length > 0;
+}
+
+function cell(text, cls) {
+  const td = document.createElement('td');
+  td.textContent = text;
+  if (cls) td.className = cls;
+  return td;
+}
+
+function select(userID) {
+  selected = userID;
+  $('detail').hidden = false;
+  refresh();
+}
+
+function updateCosts() {
+  const t = num($('tAmount').value);
+  $('tCost').textContent = t > 0
+    ? money(t) + ' + ' + money(feeInternal) + ' fee = ' + money(t + feeInternal) + ' BDT debited'
+    : 'flat ' + money(feeInternal) + ' BDT fee on top of the amount';
+  const wv = num($('wAmount').value);
+  $('wCost').textContent = wv > 0
+    ? money(wv) + ' + ' + money(feeWithdraw) + ' fee = ' + money(wv + feeWithdraw) + ' BDT debited'
+    : 'flat ' + money(feeWithdraw) + ' BDT fee on top of the amount';
+}
+
+async function refresh() {
+  try {
+    await loadAccounts();
+    await loadDetail();
+    updateCosts();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function guard(btn, fn) {
+  btn.disabled = true;
+  try { await fn(); }
+  catch (err) { toast(err.message, true); }
+  finally { btn.disabled = false; }
+}
+
+$('createBtn').onclick = (e) => guard(e.target, async () => {
+  const created = await postJSON('/api/accounts', {});
+  toast('Created account user ' + created.user_id);
+  select(created.user_id);
+});
+
+$('copyBtn').onclick = async () => {
+  const addr = $('depositAddr').textContent;
+  try {
+    await navigator.clipboard.writeText(addr);
+    toast('Deposit address copied');
+  } catch {
+    toast('Copy failed — select the address manually', true);
+  }
+};
+
+$('transferBtn').onclick = (e) => guard(e.target, async () => {
+  const to = parseInt($('toUser').value, 10);
+  if (!to) throw new Error('Create a second account first — a transfer needs a receiver');
+  const amount = $('tAmount').value.trim();
+  if (!amount) throw new Error('Enter an amount');
+  const r = await postJSON('/api/transfer', {
+    from_user_id: selected,
+    to_user_id: to,
+    amount: amount,
+  });
+  toast('Sent ' + money(r.amount) + ' BDT to user ' + to + ' (' + money(r.total_debit) + ' debited)');
+  $('tAmount').value = '';
+  await refresh();
+});
+
+$('withdrawBtn').onclick = (e) => guard(e.target, async () => {
+  const to_address = $('wAddr').value.trim();
+  const amount = $('wAmount').value.trim();
+  if (!to_address) throw new Error('Enter a destination address');
+  if (!amount) throw new Error('Enter an amount');
+  const r = await postJSON('/api/withdraw', {
+    user_id: selected,
+    to_address: to_address,
+    amount: amount,
+  });
+  toast('Withdrawal #' + r.withdrawal_id + ' queued — ' + money(r.total_debit) + ' BDT debited');
+  $('wAmount').value = '';
+  await refresh();
+});
+
+$('tAmount').oninput = updateCosts;
+$('wAmount').oninput = updateCosts;
+
+loadConfig().catch((err) => toast(err.message, true));
+refresh();
+// Deposits and withdrawal status changes come from the relayer, not from this
+// page, so poll instead of waiting for a click.
+setInterval(refresh, 6000);
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Keep secrets and junk out of the build context.
+#
+# The .env exclusion is the important one: without it, `docker build` copies
+# relayer/.env — your hot wallet private key and deposit wallet mnemonic — into
+# an image layer, where it stays forever even if a later layer deletes it. Anyone
+# who can pull the image can extract both keys.
+relayer/.env
+relayer/.env.*
+**/.env
+**/.env.*
+
+.git
+.gitignore
+node_modules
+artifacts
+cache
+*.log
+
+# Docs and contracts are not needed to build the Go binaries.
+*.md
+ledger/
+contracts/
+scripts/
+test/

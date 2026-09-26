@@ -1,0 +1,30 @@
+# Heroku container deployment for the BDT relayer.
+#
+# Deliberately ONE process type, and it is a worker, not a web dyno:
+#
+#   * The relayer listens on no port. A `web` dyno that never binds $PORT is
+#     killed by Heroku after 60 seconds ("R10 Boot timeout").
+#   * The console (cmd/api) has no per-user authentication — the account is
+#     whatever user_id the request body claims. Publishing it on a heroku.com
+#     URL would let anyone drain every balance. It refuses to start on a
+#     non-loopback address unless API_AUTH_TOKEN is set, and even then a shared
+#     token makes every holder an admin. Run it locally instead.
+#
+# Scale to exactly one dyno and never more:
+#
+#   heroku ps:scale worker=1
+#
+# Two relayers against the same hot wallet fight over the transaction nonce:
+# both read the same next nonce, both sign a different withdrawal with it, one
+# gets mined and the other is silently dropped. The dropped one has already been
+# debited from the user's balance.
+#
+# Use a dyno tier that does not sleep (Basic or higher). An Eco dyno idles, and
+# a sleeping relayer is a relayer that is not crediting deposits.
+
+build:
+  docker:
+    worker: Dockerfile
+
+run:
+  worker: relayer

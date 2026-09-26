@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0B0E11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BDT Wallet</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen active">
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="brand-badge">৳</div>
+        <h1>BDT Wallet</h1>
+        <p>তোমার ডিজিটাল BDT ওয়ালেট</p>
+      </div>
+      <label>ফোন নম্বর</label>
+      <input id="login-phone" type="tel" placeholder="01XXXXXXXXX" autocomplete="tel" oninput="checkPasskeyAvailable()">
+      <label>PIN</label>
+      <input id="login-pin" type="password" inputmode="numeric" maxlength="8" placeholder="৪-৮ ডিজিট PIN">
+      <button onclick="doLogin()" id="login-btn">লগইন করো</button>
+      <button class="ghost" onclick="doPasskeyLogin()" id="passkey-login-btn" style="display:none">🔑 Passkey দিয়ে লগইন করো</button>
+      <div class="error-banner" id="login-error"></div>
+      <div class="switch-link">একাউন্ট নেই? <a onclick="showScreen('register')">রেজিস্টার করো</a></div>
+    </div>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="screen-register" class="screen">
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="brand-badge">৳</div>
+        <h1>একাউন্ট বানাও</h1>
+        <p>কয়েক সেকেন্ডেই রেডি</p>
+      </div>
+      <label>নাম</label>
+      <input id="reg-name" type="text" placeholder="তোমার নাম">
+      <label>ফোন নম্বর</label>
+      <input id="reg-phone" type="tel" placeholder="01XXXXXXXXX" autocomplete="tel">
+      <label>PIN বানাও (৪-৮ ডিজিট)</label>
+      <input id="reg-pin" type="password" inputmode="numeric" maxlength="8" placeholder="একটা PIN দাও">
+      <button onclick="doRegister()" id="register-btn">রেজিস্টার করো</button>
+      <div class="error-banner" id="register-error"></div>
+      <div class="switch-link">আগে থেকে একাউন্ট আছে? <a onclick="showScreen('login')">লগইন করো</a></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD — Binance wallet header + bKash action grid -->
+  <div id="screen-dashboard" class="screen">
+    <div class="topbar">
+      <div class="hello">স্বাগতম<br><b id="user-name">—</b></div>
+      <div class="icon-btn" onclick="logout()" title="লগআউট">⎋</div>
+    </div>
+
+    <div class="network-pill" id="network-status">BDT Wallet</div>
+
+  <div class="balance-card">
+      <div class="label">Estimated Balance</div>
+      <div class="amount" id="balance-amount">০.০০ <span>BDT</span></div>
+      <div class="balance-actions">
+        <button onclick="openSheet('receive')">Add Funds</button>
+        <button class="ghost" onclick="openSheet('withdraw')">Withdraw</button>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <div class="action-btn" onclick="openSheet('receive')">
+        <div class="glyph">⬇</div><div class="lbl">Receive</div>
+      </div>
+      <div class="action-btn" onclick="openSheet('send')">
+        <div class="glyph">⇄</div><div class="lbl">Send</div>
+      </div>
+      <div class="action-btn" onclick="openSheet('withdraw')">
+        <div class="glyph">⬆</div><div class="lbl">Withdraw</div>
+      </div>
+      <div class="action-btn" onclick="openP2P()">
+        <div class="glyph">💱</div><div class="lbl">P2P</div>
+      </div>
+      <div class="action-btn" onclick="openSheet('verify-phone')">
+        <div class="glyph">📱</div><div class="lbl">Verify</div>
+      </div>
+      <div class="action-btn" onclick="setupPasskey()">
+        <div class="glyph">🔑</div><div class="lbl">Passkey</div>
+      </div>
+      <div class="action-btn" onclick="loadHistory(); loadBalance();">
+        <div class="glyph">↻</div><div class="lbl">Refresh</div>
+      </div>
+      <div class="action-btn" onclick="logout()">
+        <div class="glyph">⎋</div><div class="lbl">Logout</div>
+      </div>
+    </div>
+
+    <div class="section-title">সাম্প্রতিক লেনদেন</div>
+    <div class="history-list" id="history-list">
+      <div class="empty-state">লোড হচ্ছে...</div>
+    </div>
+
+    <div class="extra-links">
+      <div class="result-msg" id="passkey-setup-result"></div>
+      <button class="ghost" onclick="setupPasskey()" id="setup-passkey-btn">🔑 Passkey যোগ করো</button>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav" id="bottom-nav" style="display:none">
+    <button type="button" class="nav-item active" onclick="showScreen('dashboard')">
+      <span class="nav-ico">🏠</span>Home
+    </button>
+    <button type="button" class="nav-item" onclick="openP2P()">
+      <span class="nav-ico">💱</span>P2P
+    </button>
+    <button type="button" class="nav-item" onclick="openSheet('receive')">
+      <span class="nav-ico">⬇</span>Receive
+    </button>
+    <button type="button" class="nav-item" onclick="openSheet('send')">
+      <span class="nav-ico">⇄</span>Send
+    </button>
+  </nav>
+
+  <!-- P2P SHEET -->
+  <div class="sheet-overlay" id="sheet-p2p">
+    <div class="sheet" style="max-height:92vh">
+      <div class="close" onclick="closeSheet('p2p')">✕</div>
+
+      <!-- Main P2P view (ads/myads/orders list) -->
+      <div id="p2p-main-view">
+        <h2>P2P Trade</h2>
+        <div class="hint">তোমার BDT token real টাকা (bKash/Nagad/Bank)-এর সাথে exchange করো</div>
+
+        <div class="p2p-tabs">
+          <button onclick="switchP2PTab('browse')" id="p2p-tab-browse">Ads দেখো</button>
+          <button onclick="switchP2PTab('myads')" id="p2p-tab-myads">আমার Ads</button>
+          <button onclick="switchP2PTab('orders')" id="p2p-tab-orders">আমার Orders</button>
+        </div>
+
+        <div id="p2p-browse">
+          <div class="p2p-side-toggle">
+            <button onclick="loadAds('sell')" id="p2p-side-buy">টাকা দিয়ে BDT কিনবো</button>
+            <button onclick="loadAds('buy')" id="p2p-side-sell">BDT বেচে টাকা নিবো</button>
+          </div>
+          <div id="p2p-ads-list"><div class="empty-state">একটা ট্যাব বাছাই করো</div></div>
+        </div>
+
+        <div id="p2p-myads" style="display:none">
+          <button onclick="showCreateAdForm()" style="margin-bottom:10px">+ নতুন Ad পোস্ট করো</button>
+          <div id="p2p-create-ad-form" style="display:none">
+            <label>Side</label>
+            <select id="ad-side">
+              <option value="sell">Sell (আমার BDT দিবো, টাকা নিবো)</option>
+              <option value="buy">Buy (টাকা দিবো, BDT নিবো)</option>
+            </select>
+            <label>প্রতি BDT-এর দাম (টাকায়)</label>
+            <input id="ad-price" type="number" step="0.01" placeholder="1.00">
+            <label>Min order (BDT)</label>
+            <input id="ad-min" type="number" placeholder="50">
+            <label>Max order (BDT)</label>
+            <input id="ad-max" type="number" placeholder="1000">
+            <label>মোট Amount (BDT)</label>
+            <input id="ad-total" type="number" placeholder="5000">
+            <label>Payment methods (comma দিয়ে)</label>
+            <input id="ad-methods" type="text" placeholder="bKash,Nagad,Bank">
+            <button onclick="createAd()">Ad পোস্ট করো</button>
+          </div>
+          <div id="p2p-my-ads-list"></div>
+        </div>
+
+        <div id="p2p-orders" style="display:none">
+          <div id="p2p-orders-list"></div>
+        </div>
+
+        <div class="result-msg" id="p2p-result"></div>
+      </div>
+
+      <!-- Order creation mini-form (shown when tapping an ad card) -->
+      <div id="p2p-order-form-view" style="display:none">
+        <div class="hint" style="cursor:pointer;color:#FCD535;margin-bottom:10px" onclick="backToP2PMain()">‹ ফিরে যাও</div>
+        <h2>Order দাও</h2>
+        <div id="p2p-order-form-ad-info" class="p2p-ad-card"></div>
+        <label>কত BDT-এর order দিতে চাও</label>
+        <input id="order-amount" type="number" placeholder="0.00">
+        <label>Payment method</label>
+        <select id="order-method"></select>
+        <button class="green" onclick="submitOrder()">Order Confirm করো</button>
+      </div>
+
+      <!-- Order detail (Binance-style step timeline) -->
+      <div id="p2p-order-detail-view" style="display:none">
+        <div class="hint" style="cursor:pointer;color:#FCD535;margin-bottom:10px" onclick="backToP2PMain()">‹ ফিরে যাও</div>
+        <div class="p2p-order-detail" id="p2p-order-detail-body"></div>
+        <div class="result-msg" id="p2p-detail-result"></div>
+      </div>
+
+      <!-- Cancel reason picker -->
+      <div id="p2p-cancel-view" style="display:none">
+        <div class="hint" style="cursor:pointer;color:#FCD535;margin-bottom:10px" onclick="backToOrderDetail()">‹ ফিরে যাও</div>
+        <h2>Cancel করার কারণ</h2>
+        <div class="p2p-cancel-reasons">
+          <label><input type="radio" name="cancel-reason" value="আর ট্রেড করতে চাই না"> আর ট্রেড করতে চাই না</label>
+          <label><input type="radio" name="cancel-reason" value="Payment platform-এ সমস্যা"> Payment platform-এ সমস্যা</label>
+          <label><input type="radio" name="cancel-reason" value="ভুল করে order দিয়েছি"> ভুল করে order দিয়েছি</label>
+          <label><input type="radio" name="cancel-reason" value="অন্য কারণ"> অন্য কারণ</label>
+        </div>
+        <button class="red" onclick="confirmCancelWithReason()">Cancel Confirm করো</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERIFY PHONE SHEET -->
+  <div class="sheet-overlay" id="sheet-verify-phone">
+    <div class="sheet">
+      <div class="close" onclick="closeSheet('verify-phone')">✕</div>
+      <h2>ফোন Verify করো</h2>
+      <div class="hint">নিচের কোডটি SMS করে পাঠাও (তোমার নিজের ফোন থেকে) — টাকা কাটবে না, শুধু normal SMS</div>
+      <div id="verify-phone-idle">
+        <button onclick="startPhoneVerify()" id="verify-phone-start-btn">কোড জেনারেট করো</button>
+      </div>
+      <div id="verify-phone-active" style="display:none">
+        <label>এই কোডটি পাঠাও</label>
+        <div class="addr-box" id="verify-phone-code" style="font-size:24px;font-weight:700;letter-spacing:4px;"></div>
+        <label>এই নাম্বারে</label>
+        <div class="addr-box" id="verify-phone-target"></div>
+        <div class="result-msg ok" style="display:block;margin-top:16px;" id="verify-phone-waiting">⏳ SMS পাঠানোর অপেক্ষায়... (৫ মিনিটের মধ্যে)</div>
+      </div>
+      <div class="result-msg" id="verify-phone-result"></div>
+    </div>
+  </div>
+
+  <!-- RECEIVE SHEET -->
+  <div class="sheet-overlay" id="sheet-receive">
+    <div class="sheet">
+      <div class="close" onclick="closeSheet('receive')">✕</div>
+      <h2>Receive BDT</h2>
+      <div class="hint">এই address-এ BDT পাঠালে (BSC network দিয়ে) তোমার balance-এ যোগ হয়ে যাবে</div>
+      <div class="qr-wrap"><div class="qr-card"><div id="qr-code"></div></div></div>
+      <div class="addr-box" id="deposit-address">লোড হচ্ছে...</div>
+      <button class="ghost" onclick="copyDepositAddress()">Address কপি করো</button>
+    </div>
+  </div>
+
+  <!-- SEND SHEET -->
+  <div class="sheet-overlay" id="sheet-send">
+    <div class="sheet">
+      <div class="close" onclick="closeSheet('send')">✕</div>
+      <h2>BDT পাঠাও</h2>
+      <div class="hint">ফি: <span id="send-fee-label">৩</span> BDT (ফ্ল্যাট)</div>
+      <label>কার ফোন নম্বরে পাঠাবে</label>
+      <input id="send-phone" type="tel" placeholder="01XXXXXXXXX">
+      <label>Amount</label>
+      <input id="send-amount" type="number" inputmode="decimal" placeholder="0.00">
+      <button onclick="doSend()" id="send-btn">পাঠাও</button>
+      <div class="result-msg" id="send-result"></div>
+    </div>
+  </div>
+
+  <!-- WITHDRAW SHEET -->
+  <div class="sheet-overlay" id="sheet-withdraw">
+    <div class="sheet">
+      <div class="close" onclick="closeSheet('withdraw')">✕</div>
+      <h2>Withdraw করো</h2>
+      <div class="hint">ফি: <span id="withdraw-fee-label">১০</span> BDT · external wallet-এ on-chain যাবে</div>
+      <label>External Wallet Address (0x...)</label>
+      <input id="withdraw-address" type="text" placeholder="0x...">
+      <label>Amount</label>
+      <input id="withdraw-amount" type="number" inputmode="decimal" placeholder="0.00">
+      <button onclick="doWithdraw()" id="withdraw-btn">Withdraw Request পাঠাও</button>
+      <div class="result-msg" id="withdraw-result"></div>
+    </div>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
